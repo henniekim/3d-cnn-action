@@ -15,9 +15,9 @@ import argparse
 import cv2
 import numpy as np
 
-os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
-batch_size = 32
+batch_size = 16
 
 
 def generate_data(training_filename, training_label, batch_size, category_name):
@@ -35,8 +35,8 @@ def generate_data(training_filename, training_label, batch_size, category_name):
             sample = training_filename[shuffled_indexes[i]]
             frame_number = 0
             image_stack = []
-            for frame_number in range(8):
-                current_frame = 9 * frame_number + 10
+            for frame_number in range(16):
+                current_frame = 5 * frame_number + 10
                 image = cv2.imread(source + '/' + sample + '/' + str(current_frame) + '.jpg')
                 image = cv2.resize(image, dsize = (128, 128))
 
@@ -97,30 +97,31 @@ validation_label = np.genfromtxt(csv_validation, delimiter=',', usecols=1, dtype
 
 model = Sequential()
 
-model.add(Conv3D( filters = 64, kernel_size= (3, 3, 3), strides = (1,1,1) , padding ="same", activation="relu", data_format="channels_last", input_shape = (8, 128, 128, 3)))
-model.add(BatchNormalization())
-model.add(MaxPooling3D( pool_size = (1, 2, 2), strides=(2,2,2), padding = "same", data_format= None))
+model.add(Conv3D( filters = 64, kernel_size= (3, 3, 3), strides = (1,1,1) , padding ="same", activation="relu", data_format="channels_last", input_shape = (16, 128, 128, 3)))
+#model.add(BatchNormalization())
+model.add(MaxPooling3D( pool_size = (1, 2, 2), strides=(1,2,2), padding = "valid", data_format= None))
 
 model.add(Conv3D( filters = 128, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
-model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "same", data_format= None))
+model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "valid", data_format= None))
 
 model.add(Conv3D( filters = 256, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
 model.add(Conv3D( filters = 256, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
-model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "same", data_format= None))
+model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "valid", data_format= None))
 
 model.add(Conv3D( filters = 512, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
 model.add(Conv3D( filters = 512, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
-model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "same", data_format= None))
+model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "valid", data_format= None))
 
 model.add(Conv3D( filters = 512, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
 model.add(Conv3D( filters = 512, kernel_size= (3, 3, 3), strides= (1,1,1), padding= "same", activation="relu"))
-model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "same", data_format= None))
+model.add(MaxPooling3D( pool_size = (2, 2, 2), strides=(2,2,2), padding = "valid", data_format= None))
 
 model.add(Flatten())
 #model.add(Dropout(0.5))
 model.add(Dense( units = 4096, activation="relu"))
+model.add(Dropout(0.5))
 model.add(Dense( units = 4096, activation="relu"))
-
+model.add(Dropout(0.5))
 model.add(Dense( units = 200, activation="softmax"))
 
 model.summary()
@@ -131,7 +132,7 @@ model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy
 
 filepath = 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'
 keras.callbacks.ModelCheckpoint(filepath, monitor='val_loss', verbose = 0, save_best_only = True, period = 1)
-model.save('./3dConv'+'batchsize_'+str(batch_size))
+model.save('./3dConv'+'batchsize_'+str(batch_size)+'EPOCH-50')
 
-model.fit_generator(generate_data(training_filename, training_label, batch_size, category_name), epochs =5 , verbose = 1, steps_per_epoch= len(training_filename) // batch_size, validation_data = generate_data(validation_filename, validation_label, batch_size, category_name), validation_steps = len(validation_filename) // (batch_size))
+model.fit_generator(generate_data(training_filename, training_label, batch_size, category_name), epochs =50 , verbose = 1, steps_per_epoch= len(training_filename) // batch_size, validation_data = generate_data(validation_filename, validation_label, batch_size, category_name), validation_steps = len(validation_filename) // (batch_size))
 
